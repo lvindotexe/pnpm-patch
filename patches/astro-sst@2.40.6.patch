@@ -1,0 +1,71 @@
+diff --git a/src/entrypoint.ts b/src/entrypoint.ts
+index 18cc02be9d7dac4a0e6e87f2bca53d797dad8155..f37c4157d50e6b902c406c5417be15834069f921 100644
+--- a/src/entrypoint.ts
++++ b/src/entrypoint.ts
+@@ -83,6 +83,7 @@ export function createExports(
+       // Astro 4.x and above use RenderOptions
+       const renderOptions: RenderOptions = {
+         routeData,
++        addCookieHeader: true,
+         clientAddress:
+           internalEvent.headers["x-forwarded-for"] ||
+           internalEvent.remoteAddress,
+@@ -128,6 +129,7 @@ export function createExports(
+ 
+     const renderOptions: RenderOptions = {
+       routeData,
++      addCookieHeader: true,
+       clientAddress:
+         internalEvent.headers["x-forwarded-for"] || internalEvent.remoteAddress,
+     };
+diff --git a/src/lib/event-mapper.ts b/src/lib/event-mapper.ts
+index 7f20ce9a962a70ef5aaa9640661c778aa0f6f75e..f54798e7110d6e56b6ff947f4d60404af8acfe6c 100644
+--- a/src/lib/event-mapper.ts
++++ b/src/lib/event-mapper.ts
+@@ -156,7 +156,7 @@ export async function convertTo({
+     [
+       ...splitCookiesString(response.headers.getSetCookie() ?? undefined),
+       ...(appCookies ?? []),
+-    ],
++    ].filter((cookie, index, array) => array.indexOf(cookie) === index),
+     { decodeValues: false, map: false, silent: true }
+   );
+ 
+@@ -267,7 +267,7 @@ function convertToApigV2StreamingResult({
+   if (body.locked) {
+     responseStream.write(
+       "Fatal error: Response body is locked. " +
+-        `This can happen when the response was already read (for example through 'response.json()' or 'response.text()').`
++      `This can happen when the response was already read (for example through 'response.json()' or 'response.text()').`
+     );
+     responseStream.end();
+     return;
+@@ -295,7 +295,7 @@ function convertToApigV2StreamingResult({
+ 
+     // If the reader has already been interrupted with an error earlier,
+     // then it will appear here, it is useless, but it needs to be catch.
+-    reader.cancel(error).catch(() => {});
++    reader.cancel(error).catch(() => { });
+ 
+     if (!isBase64Encoded) {
+       // Unpipe the gzip stream to ensure no more data is written
+@@ -318,7 +318,7 @@ function convertToApigV2StreamingResult({
+   next();
+   async function next() {
+     try {
+-      for (;;) {
++      for (; ;) {
+         const { done, value } = await reader.read();
+         if (done) break;
+ 
+@@ -478,8 +478,8 @@ function stringifyCookies(cookies: Cookie[]) {
+           typeof value === "boolean"
+             ? `${key};`
+             : typeof value.toUTCString !== "undefined"
+-            ? `${key}=${value.toUTCString()};`
+-            : `${key}=${value};`
++              ? `${key}=${value.toUTCString()};`
++              : `${key}=${value};`
+         )
+         .join("")}`
+   );
